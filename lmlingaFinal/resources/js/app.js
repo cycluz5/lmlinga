@@ -1,0 +1,21 @@
+import './bootstrap';
+import * as bootstrap from 'bootstrap';
+import './pages/spot-mapping';
+import './pages/household-profiling';
+import './pages/household-view';
+import './pages/household-member-form';
+import './pages/household-member-view';
+import './pages/child-immunization';
+import './pages/child-immunization-birth-history';
+import './pages/user-management';
+import './pages/user-management-edit';
+import './pages/user-management-residents';
+import './pages/household-requests';
+import './pages/chatbot-main';
+import './pages/chatbot-household-request';
+import './pages/chatbot-household-sms';
+import './pages/chatbot-household-information';
+import './pages/household-water-supply';
+import './pages/environmental-health-dashboard';
+
+window.bootstrap = bootstrap;

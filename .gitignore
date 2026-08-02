@@ -1,0 +1,6 @@
+
+.cursor/
+lmlingaFinal/.cursor/
+lmlingaFinal/.build-log.txt
+lmlingaFinal/build-verify*.log
+lmlingaFinal/docs/qa/*.log.txt
