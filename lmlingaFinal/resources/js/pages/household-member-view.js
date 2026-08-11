@@ -98,16 +98,10 @@ function trapFocus(event, panel) {
 
 function recordToastMessage(recordName) {
     const map = {
-        'Risk Assessment': 'Risk Assessment details are not yet implemented in this UI phase.',
-        'Family Planning': 'Family Planning record details are not yet implemented in this UI phase.',
-        Maternal: 'Maternal record details are not yet implemented in this UI phase.',
-        Death: 'Death record details are not yet implemented in this UI phase.',
         'Child Immunization':
             'Child Immunization is not yet implemented in this UI phase. Navigation is prepared for a future module page.',
         'School-Based Immunization':
             'School-Based Immunization is not yet implemented in this UI phase. Navigation is prepared for a future module page.',
-        'Child Nutrition':
-            'Child Nutrition is not yet implemented in this UI phase. Navigation is prepared for a future module page.',
     };
 
     return map[recordName] || `${recordName} details are not yet implemented in this UI phase.`;

@@ -14,9 +14,36 @@
         $emptyRecord = 'No record';
         $memberName = (string) ($demoMember['name'] ?? 'Member');
         $memberSex = (string) ($demoMember['sex'] ?? '');
+        $memberAge = $demoMember['age'] ?? null;
         $dateBirth = $demoMember
             ? lml_demo_member_display($demoMember, 'birthday')
             : '';
+        $motherName = filled(data_get($demoMember, 'mother_name'))
+            ? (string) data_get($demoMember, 'mother_name')
+            : $emptyRecord;
+
+        $birthHistoryDisplay = static function (mixed $value) use ($emptyRecord): string {
+            return filled($value) ? (string) $value : $emptyRecord;
+        };
+
+        $birthHistory = [
+            'weight' => [
+                'label' => 'Birth Weight',
+                'value' => $birthHistoryDisplay(data_get($demoMember, 'birth_history.weight')),
+            ],
+            'length' => [
+                'label' => 'Birth Length',
+                'value' => $birthHistoryDisplay(data_get($demoMember, 'birth_history.length')),
+            ],
+            'status' => [
+                'label' => 'Status',
+                'value' => $birthHistoryDisplay(data_get($demoMember, 'birth_history.status')),
+            ],
+            'pcab' => [
+                'label' => 'PCAB from Neonatal Tetanus',
+                'value' => $birthHistoryDisplay(data_get($demoMember, 'birth_history.pcab')),
+            ],
+        ];
 
         $memberLastName = (string) ($demoMember['last_name'] ?? '');
         $memberFirstName = (string) ($demoMember['first_name'] ?? '');
@@ -41,6 +68,10 @@
             'tt3_td3_to_tt5_td5_prior' => 'TT3/TD3 – TT5/TD5 given to the mother anytime prior to delivery',
         ];
 
+        $sexBadgeClass = strtolower($memberSex) === 'female'
+            ? 'lml-child-imm__sex-badge--female'
+            : 'lml-child-imm__sex-badge--male';
+
         $backUrl = route('household-profiling.members.child-immunization', [
             'householdNo' => $householdNo,
             'memberId' => $memberId,
@@ -56,14 +87,6 @@
         data-member-id="{{ $memberId }}"
         data-return-url="{{ $backUrl }}"
     >
-        <div
-            class="lml-bh-edit__toast"
-            data-bh-edit-toast
-            role="status"
-            aria-live="polite"
-            hidden
-        ></div>
-
         <a
             href="{{ $backUrl }}"
             class="lml-bh-edit__back lml-focus-ring"
@@ -93,6 +116,67 @@
                 </a>
             </section>
         @else
+            {{-- Informational member context only; no Edit control on this dedicated page. --}}
+            <article
+                class="lml-child-imm__summary lml-bh-edit__summary"
+                data-bh-edit-member-summary
+                aria-labelledby="lml-bh-edit-member-name"
+            >
+                <div class="lml-child-imm__summary-profile">
+                    <span class="lml-child-imm__avatar" aria-hidden="true">
+                        <i class="bi bi-person-fill"></i>
+                    </span>
+                    <div class="lml-child-imm__summary-identity">
+                        <p id="lml-bh-edit-member-name" class="lml-child-imm__member-name">
+                            {{ $demoMember['name'] }}
+                        </p>
+                        @if ($memberSex !== '')
+                            <span class="lml-child-imm__sex-badge {{ $sexBadgeClass }}">
+                                {{ $memberSex }}
+                            </span>
+                        @endif
+                        <dl class="lml-child-imm__profile-dl">
+                            <div class="lml-child-imm__profile-item">
+                                <dt>Age:</dt>
+                                <dd>{{ $memberAge !== null && $memberAge !== '' ? $memberAge : $emptyRecord }}</dd>
+                            </div>
+                            <div class="lml-child-imm__profile-item">
+                                <dt>Date Birth:</dt>
+                                <dd>{{ $dateBirth !== '' ? $dateBirth : $emptyRecord }}</dd>
+                            </div>
+                            <div class="lml-child-imm__profile-item">
+                                <dt>Mother's Name:</dt>
+                                <dd>{{ $motherName }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div
+                    class="lml-child-imm__birth-history"
+                    aria-labelledby="lml-bh-edit-birth-summary-heading"
+                >
+                    <div class="lml-child-imm__birth-head">
+                        <h2
+                            id="lml-bh-edit-birth-summary-heading"
+                            class="lml-child-imm__birth-title"
+                        >
+                            <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                            <span aria-hidden="true">Birth History</span>
+                            <span class="visually-hidden">Birth History summary</span>
+                        </h2>
+                    </div>
+                    <dl class="lml-child-imm__birth-dl" data-child-imm-birth-summary>
+                        @foreach ($birthHistory as $key => $item)
+                            <div class="lml-child-imm__birth-item">
+                                <dt>{{ $item['label'] }}</dt>
+                                <dd data-birth-summary="{{ $key }}">{{ $item['value'] }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </article>
+
             <section
                 id="lml-child-imm-birth-editor"
                 class="lml-child-imm__birth-editor"
@@ -115,7 +199,8 @@
                             <span class="lml-child-imm__birth-editor-icon" aria-hidden="true">
                                 <i class="bi bi-person"></i>
                             </span>
-                            <span>Birth History</span>
+                            <span aria-hidden="true">Birth History</span>
+                            <span class="visually-hidden">Edit Birth History form</span>
                         </h2>
                     </header>
 

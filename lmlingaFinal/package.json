@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:js": "node --test tests/js/dashboard-sidebar.test.mjs tests/js/child-nutrition-newborn.test.mjs tests/js/risk-assessment.test.mjs tests/js/family-planning.test.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

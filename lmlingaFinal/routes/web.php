@@ -2,7 +2,12 @@
 
 use App\Support\DemoCatalog;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HouseholdProfiling\DeathController;
 use App\Http\Controllers\HouseholdProfiling\HouseholdAmenitiesController;
+use App\Http\Controllers\HouseholdProfiling\MaternalCareController;
+use App\Http\Controllers\HouseholdProfiling\RiskAssessmentHistoryController;
+use App\Support\DemoRiskAssessment;
+use App\Support\DemoFamilyPlanning;
 
 Route::get('/', function () {
     return view('welcome');
@@ -307,21 +312,9 @@ Route::middleware('ui.role')->group(function () {
 
     /*
      | Child Care health-module destinations.
-     | Child Immunization is a real UI destination. School-Based Immunization and
-     | Child Nutrition remain intentional redirect stubs until implemented.
+     | Child Immunization, School-Based Immunization, and Child Nutrition
+     | are real UI destinations (preview-safe; no persistence endpoints yet).
      */
-    $pendingChildCareRedirect = function (string $householdNo, string $memberId, string $moduleLabel) {
-        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
-        $memberKey = DemoCatalog::normalizeMemberId($memberId);
-
-        return redirect()
-            ->route('household-profiling.members.show', [
-                'householdNo' => $key,
-                'memberId' => $memberKey,
-            ])
-            ->with('lml_pending_health_module', $moduleLabel);
-    };
-
     Route::get('/household-profiling/{householdNo}/members/{memberId}/child-immunization', function (string $householdNo, string $memberId) {
         $key = DemoCatalog::normalizeHouseholdNo($householdNo);
         $memberKey = DemoCatalog::normalizeMemberId($memberId);
@@ -366,19 +359,398 @@ Route::middleware('ui.role')->group(function () {
         'memberId' => 'MB-[0-9]+',
     ])->name('household-profiling.members.child-immunization.birth-history.edit');
 
-    Route::get('/household-profiling/{householdNo}/members/{memberId}/school-based-immunization', function (string $householdNo, string $memberId) use ($pendingChildCareRedirect) {
-        return $pendingChildCareRedirect($householdNo, $memberId, 'School-Based Immunization');
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/school-based-immunization', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.school-based-immunization', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'School-Based Immunization',
+            'pageSubtitle' => $member
+                ? 'Vaccination records for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+        ]);
     })->where([
         'householdNo' => 'HH-[0-9]+',
         'memberId' => 'MB-[0-9]+',
     ])->name('household-profiling.members.school-based-immunization');
 
-    Route::get('/household-profiling/{householdNo}/members/{memberId}/child-nutrition', function (string $householdNo, string $memberId) use ($pendingChildCareRedirect) {
-        return $pendingChildCareRedirect($householdNo, $memberId, 'Child Nutrition');
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/child-nutrition', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.child-nutrition', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Child Nutrition',
+            'pageSubtitle' => $member
+                ? 'Monitor child growth and nutrition for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+        ]);
     })->where([
         'householdNo' => 'HH-[0-9]+',
         'memberId' => 'MB-[0-9]+',
     ])->name('household-profiling.members.child-nutrition');
+
+    /*
+     | Resident-specific Risk Assessment (Household Profiling member workflow).
+     | Optional health-worker assessment — empty history is valid.
+     | Distinct from barangay-wide Health Records modules.
+     */
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/risk-assessment', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.risk-assessment-history', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Risk Assessment',
+            'pageSubtitle' => $member
+                ? 'Risk assessment history for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'assessments' => $member
+                ? DemoRiskAssessment::forMember($key, $memberKey)
+                : [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.risk-assessment');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/risk-assessment/create', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.risk-assessment-form', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Risk Assessment',
+            'pageSubtitle' => $member
+                ? 'Add risk assessment for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'mode' => 'create',
+            'assessment' => [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.risk-assessment.create');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/risk-assessment/{assessmentId}', [
+        RiskAssessmentHistoryController::class,
+        'show',
+    ])->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'assessmentId' => 'RA-[0-9]+',
+    ])->name('household-profiling.members.risk-assessment.show');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/risk-assessment/{assessmentId}/{section}', [
+        RiskAssessmentHistoryController::class,
+        'section',
+    ])->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'assessmentId' => 'RA-[0-9]+',
+        'section' => 'red-flags|past-medical|family-history|lifestyle|physical',
+    ])->name('household-profiling.members.risk-assessment.section');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/risk-assessment/{assessmentId}/{section}/edit', [
+        RiskAssessmentHistoryController::class,
+        'section',
+    ])->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'assessmentId' => 'RA-[0-9]+',
+        'section' => 'red-flags|past-medical|family-history|lifestyle|physical',
+    ])->name('household-profiling.members.risk-assessment.section.edit');
+
+    Route::put('/household-profiling/{householdNo}/members/{memberId}/risk-assessment/{assessmentId}/{section}', [
+        RiskAssessmentHistoryController::class,
+        'updateSection',
+    ])->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'assessmentId' => 'RA-[0-9]+',
+        'section' => 'red-flags|past-medical|family-history|lifestyle|physical',
+    ])->name('household-profiling.members.risk-assessment.section.update');
+
+    /*
+     | Resident-specific Family Planning visits (Household Profiling member workflow).
+     | Demo catalog only — distinct from barangay-wide Health Records modules
+     | and from demographic member field fp_user.
+     */
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/family-planning', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.family-planning-history', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Family Planning',
+            'pageSubtitle' => $member
+                ? 'Family planning visit records for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'visits' => $member
+                ? DemoFamilyPlanning::forMember($key, $memberKey)
+                : [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.family-planning.index');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/family-planning/create', function (string $householdNo, string $memberId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+
+        return view('pages.household-profiling.family-planning-form', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Family Planning',
+            'pageSubtitle' => $member
+                ? 'Add family planning visit for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'mode' => 'create',
+            'visit' => [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.family-planning.create');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/family-planning/{visitId}', function (string $householdNo, string $memberId, string $visitId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+        $visit = $member
+            ? DemoFamilyPlanning::find($key, $memberKey, $visitId)
+            : null;
+
+        return view('pages.household-profiling.family-planning-show', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Family Planning',
+            'pageSubtitle' => $member
+                ? 'Family planning visit for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'visitId' => strtoupper(trim($visitId)),
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'visit' => $visit ?? [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'visitId' => 'FP-[0-9]+',
+    ])->name('household-profiling.members.family-planning.show');
+
+    Route::get('/household-profiling/{householdNo}/members/{memberId}/family-planning/{visitId}/edit', function (string $householdNo, string $memberId, string $visitId) {
+        $key = DemoCatalog::normalizeHouseholdNo($householdNo);
+        $memberKey = DemoCatalog::normalizeMemberId($memberId);
+        $household = DemoCatalog::findHousehold($key);
+        $member = $household ? lml_demo_find_member($household, $memberKey) : null;
+        $visit = $member
+            ? DemoFamilyPlanning::find($key, $memberKey, $visitId)
+            : null;
+
+        return view('pages.household-profiling.family-planning-form', [
+            'active' => 'household-profiling',
+            'pageTitle' => 'Family Planning',
+            'pageSubtitle' => $member
+                ? 'Edit family planning visit for '.$member['name'].' in '.$key.'.'
+                : 'Demo member was not found.',
+            'householdNo' => $key,
+            'memberId' => $memberKey,
+            'visitId' => strtoupper(trim($visitId)),
+            'demoHousehold' => $household,
+            'demoMember' => $member,
+            'mode' => 'edit',
+            'visit' => $visit ?? [],
+        ]);
+    })->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'visitId' => 'FP-[0-9]+',
+    ])->name('household-profiling.members.family-planning.edit');
+
+    /*
+     | Resident-specific Maternal Care (Household Profiling member workflow).
+     | Phase 1: session/preview state only — no database persistence.
+     */
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care',
+        [MaternalCareController::class, 'index']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.index');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/register',
+        [MaternalCareController::class, 'register']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.register');
+
+    Route::post(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/register',
+        [MaternalCareController::class, 'store']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.store');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/history',
+        [MaternalCareController::class, 'history']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.history');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/trans-out',
+        [MaternalCareController::class, 'transOut']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.trans-out');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/prenatal',
+        [MaternalCareController::class, 'prenatal']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.prenatal');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/immunizations',
+        [MaternalCareController::class, 'immunizations']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.immunizations');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/supplementations',
+        [MaternalCareController::class, 'supplementations']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.supplementations');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/laboratory',
+        [MaternalCareController::class, 'laboratory']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.laboratory');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/delivery',
+        [MaternalCareController::class, 'delivery']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.delivery');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/postnatal',
+        [MaternalCareController::class, 'postnatal']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.maternal-care.postnatal');
+
+    Route::put(
+        '/household-profiling/{householdNo}/members/{memberId}/maternal-care/{section}',
+        [MaternalCareController::class, 'updateSection']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+        'section' => 'prenatal|immunizations|supplementations|laboratory|delivery|postnatal|trans-out',
+    ])->name('household-profiling.members.maternal-care.update');
+
+    /*
+     | Resident-specific Death Information (Household Profiling member workflow).
+     | Phase 1: session/preview state only — no database persistence / permanent uploads.
+     */
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/death',
+        [DeathController::class, 'index']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.death.index');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/death/create',
+        [DeathController::class, 'create']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.death.create');
+
+    Route::post(
+        '/household-profiling/{householdNo}/members/{memberId}/death',
+        [DeathController::class, 'store']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.death.store');
+
+    Route::get(
+        '/household-profiling/{householdNo}/members/{memberId}/death/edit',
+        [DeathController::class, 'edit']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.death.edit');
+
+    Route::put(
+        '/household-profiling/{householdNo}/members/{memberId}/death',
+        [DeathController::class, 'update']
+    )->where([
+        'householdNo' => 'HH-[0-9]+',
+        'memberId' => 'MB-[0-9]+',
+    ])->name('household-profiling.members.death.update');
 
     Route::get('/environmental-health', [
         \App\Http\Controllers\EnvironmentalHealth\EnvironmentalHealthDashboardController::class,
@@ -429,4 +801,142 @@ Route::middleware('ui.role')->group(function () {
         '/environmental-health/household-water-supply/{householdNo}/step-4',
         [\App\Http\Controllers\EnvironmentalHealth\HouseholdWaterSupplyController::class, 'storeStep4']
     )->where('householdNo', '[A-Za-z0-9\-]+')->name('environmental-health.household-water-supply.step4.store');
+
+    /*
+     | Health Records — Child Care barangay-wide summary (demo catalog aggregate).
+     | Vitamin A / Deworming / Operation Timbang monitoring summaries reuse
+     | named child-care routes.
+     */
+    Route::get('/health-records/child-care', [
+        \App\Http\Controllers\HealthRecords\ChildCareSummaryController::class,
+        'index',
+    ])->name('health-records.child-care.index');
+
+    Route::get('/health-records/child-care/vitamin-a', [
+        \App\Http\Controllers\HealthRecords\ChildCareSummaryController::class,
+        'vitaminA',
+    ])->name('health-records.child-care.vitamin-a');
+
+    Route::get('/health-records/child-care/deworming', [
+        \App\Http\Controllers\HealthRecords\ChildCareSummaryController::class,
+        'deworming',
+    ])->name('health-records.child-care.deworming');
+
+    Route::get('/health-records/child-care/operation-timbang', [
+        \App\Http\Controllers\HealthRecords\ChildCareSummaryController::class,
+        'operationTimbang',
+    ])->name('health-records.child-care.operation-timbang');
+
+    Route::get('/health-records/child-care/non-residents', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'index',
+    ])->name('health-records.child-care.non-residents.index');
+
+    Route::get('/health-records/child-care/non-residents/create', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'create',
+    ])->name('health-records.child-care.non-residents.create');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'show',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.show');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/nutrition', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'nutrition',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.nutrition');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/nutrition/create', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'createMeasurement',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.nutrition.create');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/nutrition/{measurementId}/edit', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'editMeasurement',
+    ])->where([
+        'childKey' => '[A-Za-z0-9\-]+',
+        'measurementId' => '[A-Za-z0-9\-]+',
+    ])->name('health-records.child-care.non-residents.nutrition.edit');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/immunization', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'immunization',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.immunization');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/immunization/birth-history', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'editBirthHistory',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.immunization.birth-history');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/school-based-immunization', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'schoolBasedImmunization',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.school-based-immunization');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/child-nutrition', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'childNutrition',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.child-nutrition');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/deworming', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'deworming',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.deworming');
+
+    Route::get('/health-records/child-care/non-residents/{childKey}/deworming/create', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'createDeworming',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.deworming.create');
+
+    /*
+     | Health Records — Risk Assessment barangay-wide summary (UI-phase fixture).
+     | Independent of Household Profiling → member Risk Assessment (frozen).
+     */
+    Route::get('/health-records/risk-assessment', [
+        \App\Http\Controllers\HealthRecords\RiskAssessmentSummaryController::class,
+        'index',
+    ])->name('health-records.risk-assessment.index');
+
+    /*
+     | Health Records — Family Planning barangay-wide summary (UI-phase fixture).
+     | Independent of Household Profiling → member Family Planning.
+     */
+    Route::get('/health-records/family-planning', [
+        \App\Http\Controllers\HealthRecords\FamilyPlanningSummaryController::class,
+        'index',
+    ])->name('health-records.family-planning.index');
+
+    /*
+     | Health Records → Family Planning → Non-Resident / unregistered clients (UI-phase).
+     | Distinct from Household Profiling → member Family Planning.
+     */
+    Route::prefix('health-records/family-planning/non-residents')->group(function () {
+        Route::get('/', [
+            \App\Http\Controllers\HealthRecords\NonResidentFamilyPlanningController::class,
+            'index',
+        ])->name('health-records.family-planning.non-residents.index');
+
+        Route::get('/create', [
+            \App\Http\Controllers\HealthRecords\NonResidentFamilyPlanningController::class,
+            'create',
+        ])->name('health-records.family-planning.non-residents.create');
+
+        Route::get('/{clientKey}', [
+            \App\Http\Controllers\HealthRecords\NonResidentFamilyPlanningController::class,
+            'show',
+        ])->where('clientKey', '[a-z0-9\-]+')->name('health-records.family-planning.non-residents.show');
+
+        Route::get('/{clientKey}/visits/create', [
+            \App\Http\Controllers\HealthRecords\NonResidentFamilyPlanningController::class,
+            'createVisit',
+        ])->where('clientKey', '[a-z0-9\-]+')->name('health-records.family-planning.non-residents.visits.create');
+
+        Route::get('/{clientKey}/visits/{visitId}/edit', [
+            \App\Http\Controllers\HealthRecords\NonResidentFamilyPlanningController::class,
+            'editVisit',
+        ])->where(['clientKey' => '[a-z0-9\-]+', 'visitId' => '[A-Za-z0-9\-]+'])
+            ->name('health-records.family-planning.non-residents.visits.edit');
+    });
 });

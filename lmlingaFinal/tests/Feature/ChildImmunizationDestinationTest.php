@@ -184,32 +184,33 @@ class ChildImmunizationDestinationTest extends TestCase
         $response->assertSee('aria-label="Back to Health Summary Records for Kristine Reyes"', false);
     }
 
-    public function test_school_based_immunization_remains_redirect_stub(): void
+    public function test_school_based_immunization_is_real_destination_not_redirect_stub(): void
     {
         $params = $this->memberParams();
-        $showUrl = route('household-profiling.members.show', $params);
 
         $response = $this->get(route(
             'household-profiling.members.school-based-immunization',
             $params
         ));
 
-        $response->assertRedirect($showUrl);
-        $response->assertSessionHas('lml_pending_health_module', 'School-Based Immunization');
+        $response->assertOk();
+        $response->assertSee('data-lml-sbi', false);
+        $response->assertSessionMissing('lml_pending_health_module');
     }
 
-    public function test_child_nutrition_remains_redirect_stub(): void
+    public function test_child_nutrition_is_no_longer_a_redirect_stub(): void
     {
         $params = $this->memberParams();
-        $showUrl = route('household-profiling.members.show', $params);
 
         $response = $this->get(route(
             'household-profiling.members.child-nutrition',
             $params
         ));
 
-        $response->assertRedirect($showUrl);
-        $response->assertSessionHas('lml_pending_health_module', 'Child Nutrition');
+        $response->assertOk();
+        $this->assertFalse($response->isRedirect());
+        $response->assertSessionMissing('lml_pending_health_module');
+        $response->assertSee('data-lml-child-nut', false);
     }
 
     public function test_completion_cards_use_approved_age_ranges_and_cic_label(): void
@@ -420,6 +421,8 @@ class ChildImmunizationDestinationTest extends TestCase
         $html = $response->getContent();
 
         $this->assertStringContainsString('data-lml-bh-edit', $html);
+        $this->assertStringContainsString('data-household-no="HH-151"', $html);
+        $this->assertStringContainsString('data-member-id="MB-001"', $html);
         $this->assertStringContainsString('data-child-imm-birth-form', $html);
         $this->assertStringContainsString('id="lml-child-imm-birth-editor-heading"', $html);
         $this->assertMatchesRegularExpression(
@@ -439,6 +442,89 @@ class ChildImmunizationDestinationTest extends TestCase
         $this->assertStringNotContainsString('id="lml-child-imm-vax-fic"', $html);
         $this->assertStringNotContainsString('id="lml-child-imm-vax-cic"', $html);
         $this->assertStringNotContainsString('Vaccines Type', $html);
+        $this->assertStringNotContainsString('data-bh-edit-toast', $html);
+        $this->assertStringNotContainsString('lml-bh-edit__toast', $html);
+    }
+
+    public function test_dedicated_birth_history_headings_have_distinct_accessible_names(): void
+    {
+        $response = $this->get(route(
+            'household-profiling.members.child-immunization.birth-history.edit',
+            $this->memberParams()
+        ));
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $this->assertSame(1, preg_match_all('/<h1\b/i', $html));
+        $this->assertMatchesRegularExpression(
+            '/<h1[^>]*>\s*Birth History\s*<\/h1>/u',
+            $html
+        );
+
+        $this->assertMatchesRegularExpression(
+            '/id="lml-bh-edit-birth-summary-heading"[\s\S]*?visually-hidden[^>]*>\s*Birth History summary\s*<\/span>/u',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/id="lml-child-imm-birth-editor-heading"[\s\S]*?visually-hidden[^>]*>\s*Edit Birth History form\s*<\/span>/u',
+            $html
+        );
+        $this->assertStringContainsString('data-persistence="preview"', $html);
+        $this->assertStringNotContainsString('method="post"', $html);
+        $this->assertStringNotContainsString('data-bh-edit-toast', $html);
+    }
+
+    public function test_dedicated_birth_history_page_shows_member_summary_card(): void
+    {
+        $response = $this->get(route(
+            'household-profiling.members.child-immunization.birth-history.edit',
+            $this->memberParams()
+        ));
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('data-bh-edit-member-summary', $html);
+        $this->assertStringContainsString('lml-bh-edit__summary', $html);
+        $this->assertStringContainsString('id="lml-bh-edit-member-name"', $html);
+        $this->assertMatchesRegularExpression(
+            '/id="lml-bh-edit-member-name"[^>]*>\s*Kristine Reyes\s*<\/p>/u',
+            $html
+        );
+        $this->assertStringContainsString('lml-child-imm__sex-badge--male', $html);
+        $this->assertMatchesRegularExpression(
+            '/lml-child-imm__sex-badge--male[^>]*>\s*Male\s*<\/span>/u',
+            $html
+        );
+        $this->assertStringContainsString('<dt>Age:</dt>', $html);
+        $this->assertStringContainsString('<dd>35</dd>', $html);
+        $this->assertStringContainsString('<dt>Date Birth:</dt>', $html);
+        $this->assertStringContainsString('May 4, 1991', $html);
+        $this->assertStringContainsString("<dt>Mother's Name:</dt>", $html);
+        $this->assertMatchesRegularExpression(
+            "/Mother's Name:<\/dt>\s*<dd>No record<\/dd>/u",
+            $html
+        );
+
+        $this->assertStringContainsString('id="lml-bh-edit-birth-summary-heading"', $html);
+        $this->assertStringContainsString('Birth Weight', $html);
+        $this->assertStringContainsString('Birth Length', $html);
+        $this->assertMatchesRegularExpression('/<dt>\s*Status\s*<\/dt>/u', $html);
+        $this->assertStringContainsString('PCAB from Neonatal Tetanus', $html);
+        $this->assertGreaterThanOrEqual(4, substr_count($html, 'No record'));
+
+        // Dedicated page summary is informational — no nested Edit control.
+        $this->assertStringNotContainsString('data-child-imm-birth-edit-link', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/data-bh-edit-member-summary[\s\S]*?aria-label="Edit birth history"/u',
+            $html
+        );
+        $this->assertSame(1, preg_match_all('/<h1\b/i', $html));
+        $this->assertDoesNotMatchRegularExpression(
+            '/id="lml-bh-edit-member-name"[^>]*<\/?h1/i',
+            $html
+        );
     }
 
     public function test_birth_history_back_and_close_target_child_immunization_route(): void

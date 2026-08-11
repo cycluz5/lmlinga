@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -44,7 +43,12 @@ class HouseholdProfilingHouseholdMemberViewTest extends TestCase
         $this->assertSame(1, substr_count($html, 'Child Immunization'));
         $this->assertSame(1, substr_count($html, 'School-Based Immunization'));
         $this->assertSame(1, substr_count($html, 'Child Nutrition'));
-        $this->assertSame(1, substr_count($html, '>Child Care</span>'));
+        // Accordion toggle label (sidebar also lists Child Care under Health Records).
+        $this->assertSame(1, substr_count($html, 'id="lml-hh-mv-child-care-toggle"'));
+        $this->assertMatchesRegularExpression(
+            '/id="lml-hh-mv-child-care-toggle"[\s\S]*?>Child Care<\/span>/u',
+            $html
+        );
     }
 
     public function test_child_care_links_use_named_routes(): void
@@ -87,10 +91,50 @@ class HouseholdProfilingHouseholdMemberViewTest extends TestCase
         $response->assertSee('Family Planning', false);
         $response->assertSee('Maternal', false);
         $response->assertSee('Death', false);
-        $response->assertSee('data-hh-member-view-record="Risk Assessment"', false);
-        $response->assertSee('data-hh-member-view-record="Family Planning"', false);
-        $response->assertSee('data-hh-member-view-record="Maternal"', false);
-        $response->assertSee('data-hh-member-view-record="Death"', false);
+        $response->assertSee('data-hh-member-risk-assessment', false);
+        $response->assertSee('data-hh-member-family-planning', false);
+        $response->assertSee('data-hh-member-maternal-care', false);
+        $response->assertSee('data-hh-member-death', false);
+        $response->assertDontSee('data-hh-member-view-record="Risk Assessment"', false);
+        $response->assertDontSee('data-hh-member-view-record="Family Planning"', false);
+        $response->assertDontSee('data-hh-member-view-record="Maternal"', false);
+        $response->assertDontSee('data-hh-member-view-record="Death"', false);
+
+        $riskUrl = route('household-profiling.members.risk-assessment', [
+            'householdNo' => 'HH-151',
+            'memberId' => 'MB-001',
+        ]);
+        $fpUrl = route('household-profiling.members.family-planning.index', [
+            'householdNo' => 'HH-151',
+            'memberId' => 'MB-001',
+        ]);
+        $mcUrl = route('household-profiling.members.maternal-care.index', [
+            'householdNo' => 'HH-151',
+            'memberId' => 'MB-001',
+        ]);
+        $deathUrl = route('household-profiling.members.death.index', [
+            'householdNo' => 'HH-151',
+            'memberId' => 'MB-001',
+        ]);
+        $response->assertSee('href="'.e($riskUrl).'"', false);
+        $response->assertSee('href="'.e($fpUrl).'"', false);
+        $response->assertSee('href="'.e($mcUrl).'"', false);
+        $response->assertSee('href="'.e($deathUrl).'"', false);
+        $response->assertSee('data-death-entry="index"', false);
+        $response->assertDontSee(
+            'href="'.e(route('household-profiling.members.death.create', [
+                'householdNo' => 'HH-151',
+                'memberId' => 'MB-001',
+            ])).'"',
+            false
+        );
+        $response->assertDontSee(
+            'href="'.e(route('household-profiling.members.death.edit', [
+                'householdNo' => 'HH-151',
+                'memberId' => 'MB-001',
+            ])).'"',
+            false
+        );
     }
 
     public function test_member_edit_and_delete_controls_remain_present(): void
@@ -138,44 +182,37 @@ class HouseholdProfilingHouseholdMemberViewTest extends TestCase
         );
     }
 
-    #[DataProvider('pendingChildCareModulesProvider')]
-    public function test_pending_child_care_stub_redirects_with_flash_and_member_markup(
-        string $routeName,
-        string $moduleLabel
-    ): void {
+    public function test_child_nutrition_is_no_longer_a_pending_redirect_stub(): void
+    {
         $params = [
             'householdNo' => 'HH-151',
             'memberId' => 'MB-001',
         ];
-        $showUrl = route('household-profiling.members.show', $params);
 
-        $response = $this->get(route($routeName, $params));
+        $response = $this->get(route(
+            'household-profiling.members.child-nutrition',
+            $params
+        ));
 
-        $response->assertRedirect($showUrl);
-        $response->assertSessionHas('lml_pending_health_module', $moduleLabel);
-
-        $followed = $this->followRedirects($response);
-        $followed->assertOk();
-        $followed->assertSee('data-pending-health-module="'.$moduleLabel.'"', false);
-        $followed->assertSee('data-household-no="HH-151"', false);
-        $followed->assertSee('data-member-id="MB-001"', false);
-        $followed->assertSee('>Child Care</span>', false);
+        $response->assertOk();
+        $response->assertSee('data-lml-child-nut', false);
+        $response->assertSessionMissing('lml_pending_health_module');
     }
 
-    /**
-     * @return array<string, array{0: string, 1: string}>
-     */
-    public static function pendingChildCareModulesProvider(): array
+    public function test_school_based_immunization_is_no_longer_a_pending_redirect_stub(): void
     {
-        return [
-            'school-based immunization' => [
-                'household-profiling.members.school-based-immunization',
-                'School-Based Immunization',
-            ],
-            'child nutrition' => [
-                'household-profiling.members.child-nutrition',
-                'Child Nutrition',
-            ],
+        $params = [
+            'householdNo' => 'HH-151',
+            'memberId' => 'MB-001',
         ];
+
+        $response = $this->get(route(
+            'household-profiling.members.school-based-immunization',
+            $params
+        ));
+
+        $response->assertOk();
+        $response->assertSee('data-lml-sbi', false);
+        $response->assertSessionMissing('lml_pending_health_module');
     }
 }

@@ -265,10 +265,6 @@
     border-radius: var(--lml-radius-md);
 }
 
-.lml-sidebar__parent-link:hover {
-    color: var(--lml-text-green);
-}
-
 .lml-sidebar__chevron-btn {
     display: inline-flex;
     align-items: center;
@@ -284,9 +280,30 @@
     line-height: 1;
 }
 
-.lml-sidebar__chevron-btn:hover {
-    color: var(--lml-text-green);
-    background-color: rgba(255, 255, 255, 0.85);
+/*
+ * Hover treatment only for fine pointers. Touch devices otherwise keep a sticky
+ * :hover green state after expanding Health Records, which reads as a second
+ * active destination while Dashboard (etc.) remains aria-current.
+ */
+@media (hover: hover) and (pointer: fine) {
+    .lml-sidebar__parent-link:hover {
+        color: var(--lml-text-green);
+    }
+
+    .lml-sidebar__chevron-btn:hover {
+        color: var(--lml-text-green);
+        background-color: rgba(255, 255, 255, 0.85);
+    }
+
+    .lml-sidebar__collapse-row:hover {
+        color: var(--lml-text-green);
+        background-color: rgba(255, 255, 255, 0.75);
+    }
+
+    .lml-sidebar__link:hover {
+        color: var(--lml-text-green);
+        background-color: rgba(255, 255, 255, 0.75);
+    }
 }
 
 .lml-sidebar__chevron {
@@ -295,18 +312,21 @@
     transition: transform 0.2s ease;
 }
 
+/* Collapsed uses bi-chevron-right; expanded rotates to point down. */
 .lml-sidebar__chevron-btn[aria-expanded="true"] .lml-sidebar__chevron {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
 }
 
-.lml-sidebar__collapse-row:hover {
-    color: var(--lml-text-green);
-    background-color: rgba(255, 255, 255, 0.75);
+@media (prefers-reduced-motion: reduce) {
+    .lml-sidebar__chevron {
+        transition: none;
+    }
 }
 
-.lml-sidebar__link:hover {
-    color: var(--lml-text-green);
-    background-color: rgba(255, 255, 255, 0.75);
+.lml-sidebar__chevron-btn:focus:not(:focus-visible) {
+    outline: none;
+    background-color: transparent;
+    color: inherit;
 }
 
 .lml-sidebar__link:focus-visible,
@@ -347,6 +367,32 @@
 }
 
 /*
+ * Expanded Health Records parent with an active child (state A):
+ * Expansion is communicated by the chevron. Do not use active-pill green —
+ * that must remain exclusive to the current destination (child when open,
+ * or the parent only when collapsed over an active child).
+ */
+.lml-sidebar__link--parent-expanded {
+    color: #4b5563;
+    font-weight: 500;
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.lml-sidebar__link--parent-expanded .lml-sidebar__icon,
+.lml-sidebar__link--parent-expanded .lml-sidebar__chevron-btn {
+    color: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .lml-sidebar__link--parent-expanded:hover {
+        color: #4b5563;
+        background-color: rgba(255, 255, 255, 0.55);
+    }
+}
+
+/*
  * Admin active style — solid light-green fill, dark-green text/icon (WCAG AA).
  * Background: --lml-light-green (#51C269). Text/icon: --lml-dark-green (≥4.5:1).
  * No white card, outline, or glow. Driven by layout data-role attribute.
@@ -376,6 +422,25 @@
     color: var(--lml-dark-green);
 }
 
+.lml-dashboard[data-role="admin"] .lml-sidebar__link--parent-expanded {
+    color: #374151;
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.lml-dashboard[data-role="admin"] .lml-sidebar__link--parent-expanded .lml-sidebar__icon,
+.lml-dashboard[data-role="admin"] .lml-sidebar__link--parent-expanded .lml-sidebar__chevron-btn {
+    color: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .lml-dashboard[data-role="admin"] .lml-sidebar__link--parent-expanded:hover {
+        color: #374151;
+        background-color: rgba(255, 255, 255, 0.55);
+    }
+}
+
 .lml-dashboard[data-role="admin"] .lml-sidebar__sublink--active {
     color: var(--lml-dark-green);
     background-color: var(--lml-light-green);
@@ -392,8 +457,55 @@
     background-color: var(--lml-light-green);
 }
 
-.lml-sidebar__item--collapse .collapse {
+.lml-sidebar__item--collapse .lml-sidebar__collapse-panel {
     margin-top: 0.1rem;
+}
+
+/*
+ * Sidebar-owned submenu panel — do NOT use Bootstrap/Tailwind `.collapse`.
+ * Closed state is driven by [hidden] + absence of .is-open, with !important so
+ * utility-layer collisions cannot leave child rows visible.
+ * Closed SSR also keeps children inside <template> (see sidebar.blade.php).
+ */
+#lmlDashboardSidebar .lml-sidebar__collapse-panel[hidden],
+#lmlDashboardSidebar .lml-sidebar__collapse-panel:not(.is-open) {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+#lmlDashboardSidebar .lml-sidebar__collapse-panel[hidden] .lml-sidebar__sublist,
+#lmlDashboardSidebar .lml-sidebar__collapse-panel:not(.is-open) .lml-sidebar__sublist,
+#lmlDashboardSidebar .lml-sidebar__collapse-panel[hidden] .lml-sidebar__sublink,
+#lmlDashboardSidebar .lml-sidebar__collapse-panel:not(.is-open) .lml-sidebar__sublink {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+#lmlDashboardSidebar .lml-sidebar__collapse-panel.is-open:not([hidden]) {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+#lmlDashboardSidebar .lml-sidebar__collapse-panel.is-open:not([hidden]) .lml-sidebar__sublist {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+#lmlDashboardSidebar .lml-sidebar__collapse-panel.is-open:not([hidden]) .lml-sidebar__sublink {
+    display: flex !important;
+    visibility: visible !important;
 }
 
 .lml-sidebar__sublist {
@@ -449,6 +561,31 @@
 .lml-sidebar__sublink--active:hover,
 .lml-sidebar__sublink--active:focus-visible {
     color: var(--lml-text-green);
+}
+
+/* Named route not yet registered — visible label, not a navigation target. */
+.lml-sidebar__sublink--unavailable {
+    cursor: default;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.lml-sidebar__sublink--unavailable:hover {
+    color: #6b7280;
+    background-color: transparent;
+}
+
+.lml-sidebar__sublink--unavailable.lml-sidebar__sublink--active,
+.lml-sidebar__sublink--unavailable.lml-sidebar__sublink--active:hover {
+    color: var(--lml-text-green);
+    background-color: #fff;
+    opacity: 1;
+}
+
+.lml-dashboard[data-role="admin"] .lml-sidebar__sublink--unavailable.lml-sidebar__sublink--active,
+.lml-dashboard[data-role="admin"] .lml-sidebar__sublink--unavailable.lml-sidebar__sublink--active:hover {
+    color: var(--lml-dark-green);
+    background-color: var(--lml-light-green);
 }
 
 .lml-sidebar__footer {

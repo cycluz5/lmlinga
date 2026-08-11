@@ -8,12 +8,30 @@
 
 @section('content')
     @php
-        $healthRecords = [
-            'Risk Assessment',
-            'Family Planning',
-            'Maternal',
-            'Death',
-        ];
+        $riskAssessmentUrl = ($demoHousehold && $demoMember)
+            ? route('household-profiling.members.risk-assessment', [
+                'householdNo' => $demoHousehold['householdNo'],
+                'memberId' => $demoMember['id'],
+            ])
+            : null;
+        $familyPlanningUrl = ($demoHousehold && $demoMember)
+            ? route('household-profiling.members.family-planning.index', [
+                'householdNo' => $demoHousehold['householdNo'],
+                'memberId' => $demoMember['id'],
+            ])
+            : null;
+        $maternalCareUrl = ($demoHousehold && $demoMember)
+            ? route('household-profiling.members.maternal-care.index', [
+                'householdNo' => $demoHousehold['householdNo'],
+                'memberId' => $demoMember['id'],
+            ])
+            : null;
+        $deathUrl = ($demoHousehold && $demoMember)
+            ? route('household-profiling.members.death.index', [
+                'householdNo' => $demoHousehold['householdNo'],
+                'memberId' => $demoMember['id'],
+            ])
+            : null;
         $nutrition = data_get($demoMember, 'nutrition', [
             'weight' => '—',
             'height' => '—',
@@ -294,18 +312,62 @@
                                 </div>
                             </li>
 
-                            @foreach ($healthRecords as $record)
+                            @if ($riskAssessmentUrl)
                                 <li class="lml-hh-member-view__record">
-                                    <span>{{ $record }}</span>
-                                    <button
-                                        type="button"
+                                    <span>Risk Assessment</span>
+                                    <a
+                                        href="{{ $riskAssessmentUrl }}"
                                         class="lml-hh-member-view__record-view lml-focus-ring"
-                                        data-hh-member-view-record="{{ $record }}"
+                                        data-hh-member-risk-assessment
+                                        aria-label="View Risk Assessment history for {{ $demoMember['name'] }}"
                                     >
                                         View
-                                    </button>
+                                    </a>
                                 </li>
-                            @endforeach
+                            @endif
+
+                            @if ($familyPlanningUrl)
+                                <li class="lml-hh-member-view__record">
+                                    <span>Family Planning</span>
+                                    <a
+                                        href="{{ $familyPlanningUrl }}"
+                                        class="lml-hh-member-view__record-view lml-focus-ring"
+                                        data-hh-member-family-planning
+                                        aria-label="View Family Planning visit records for {{ $demoMember['name'] }}"
+                                    >
+                                        View
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($maternalCareUrl)
+                                <li class="lml-hh-member-view__record">
+                                    <span>Maternal</span>
+                                    <a
+                                        href="{{ $maternalCareUrl }}"
+                                        class="lml-hh-member-view__record-view lml-focus-ring"
+                                        data-hh-member-maternal-care
+                                        aria-label="View Maternal Care for {{ $demoMember['name'] }}"
+                                    >
+                                        View
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($deathUrl)
+                                <li class="lml-hh-member-view__record">
+                                    <span>Death</span>
+                                    <a
+                                        href="{{ $deathUrl }}"
+                                        class="lml-hh-member-view__record-view lml-focus-ring"
+                                        data-hh-member-death
+                                        data-death-entry="index"
+                                        aria-label="View Death Information for {{ $demoMember['name'] }}"
+                                    >
+                                        View
+                                    </a>
+                                </li>
+                            @endif
                         </ul>
                     </section>
 

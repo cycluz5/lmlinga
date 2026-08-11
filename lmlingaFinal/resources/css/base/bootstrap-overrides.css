@@ -117,6 +117,7 @@
  * That class name collides with Bootstrap Collapse and makes open panels
  * inherit visibility:collapse (content appears to open then vanish).
  * Restore Bootstrap's expected visibility for collapse/collapsing panels.
+ * Do not change display here — closed Bootstrap panels still use :not(.show).
  */
 .collapse,
 .collapsing {

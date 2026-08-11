@@ -21,22 +21,6 @@
     }
 }
 
-.lml-bh-edit__toast {
-    margin: 0;
-    padding: 0.65rem 0.85rem;
-    border: 1px solid rgba(var(--lml-primary-rgb), 0.35);
-    border-radius: var(--lml-radius-md);
-    background-color: #f0fdf4;
-    color: var(--lml-deep-green);
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.4;
-}
-
-.lml-bh-edit__toast[hidden] {
-    display: none !important;
-}
-
 .lml-bh-edit__back {
     display: inline-flex;
     align-items: center;
@@ -101,6 +85,19 @@
 .lml-bh-edit__not-found-link:hover {
     color: var(--lml-deep-green);
     text-decoration: underline;
+}
+
+/*
+ | Member summary card reuses .lml-child-imm__summary styles from
+ | child-immunization.css. Keep a clear gap before the edit form.
+ */
+.lml-bh-edit__summary {
+    margin: 0;
+}
+
+.lml-bh-edit__summary .lml-child-imm__birth-head {
+    /* No Edit link on this dedicated page — title alone. */
+    justify-content: flex-start;
 }
 
 /* ── Birth History form card (accepted visual baseline) ──────── */
