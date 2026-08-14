@@ -1,7 +1,7 @@
 /**
  * Health Records → Risk Assessment barangay-wide summary.
- * Filters operate on displayed UI-phase fixture rows only.
- * Add / Export use UI-phase toasts (no create route / no download).
+ * Filters operate on server-supplied eligible resident rows (19+) only.
+ * Export uses a UI-phase toast (no download).
  */
 
 function showRiskAssessmentToast(root, message) {
@@ -71,20 +71,12 @@ function applyRiskAssessmentFilters(root) {
 }
 
 function initHealthRecordsRiskAssessment(root) {
-    const addBtn = root.querySelector('[data-hr-ra-add]');
     const exportBtn = root.querySelector('[data-hr-ra-export]');
     const searchInput = root.querySelector('[data-hr-ra-search]');
     const zoneSelect = root.querySelector('[data-hr-ra-zone]');
     const yearSelect = root.querySelector('[data-hr-ra-year]');
 
     const refresh = () => applyRiskAssessmentFilters(root);
-
-    addBtn?.addEventListener('click', () => {
-        showRiskAssessmentToast(
-            root,
-            'Individual Risk Assessments are conducted through Household Profiling → selected household member. No barangay-level create route.'
-        );
-    });
 
     exportBtn?.addEventListener('click', () => {
         showRiskAssessmentToast(root, 'Export is not available during the UI phase.');

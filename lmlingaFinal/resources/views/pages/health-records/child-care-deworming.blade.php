@@ -24,6 +24,7 @@
         $vitaminAUrl = route('health-records.child-care.vitamin-a');
         $dewormingUrl = route('health-records.child-care.deworming');
         $operationTimbangUrl = route('health-records.child-care.operation-timbang');
+        $nonResidentsUrl = route('health-records.child-care.non-residents.index');
         $pageDescription = 'Record and management of deworming details for monitoring and tracking treatment status.';
         $totalRows = count($rows);
     @endphp
@@ -37,7 +38,17 @@
         <div class="lml-hr-child-care__panel">
             <header class="lml-hr-child-care__top">
                 <div class="lml-hr-child-care__title-row">
-                    <h2 class="lml-hr-child-care__title" id="lml-hr-deworming-heading">Child Care</h2>
+                    <div class="lml-hr-child-care__title-cluster">
+                        <h2 class="lml-hr-child-care__title" id="lml-hr-deworming-heading">Child Care</h2>
+                        <a
+                            href="{{ $nonResidentsUrl }}"
+                            class="lml-hr-child-care__scope-pill lml-focus-ring"
+                            data-hr-cc-non-residents
+                        >
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <span>Non-Residents</span>
+                        </a>
+                    </div>
                     <nav class="lml-hr-child-care__nav-pills" aria-label="Child Care related summaries">
                         <a
                             href="{{ $vitaminAUrl }}"

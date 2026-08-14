@@ -1,17 +1,17 @@
 {{--
-    Health Records → Family Planning → Add New Client (non-resident).
+    Health Records → Family Planning → Add New Non Resident.
     UI preview — Save does not persist.
 --}}
 @extends('layouts.dashboard')
 
-@section('title', 'Add New Client — Family Planning - LMLinga')
+@section('title', 'Add New Non Resident — Family Planning - LMLinga')
 
 @section('content')
     @php
         $listingUrl = route('health-records.family-planning.non-residents.index');
-        $barangays = $barangays ?? [];
         $civilStatusOptions = $civilStatusOptions ?? [];
         $sexOptions = $sexOptions ?? [];
+        $methodOptions = $methodOptions ?? [];
         $commodityOptions = $commodityOptions ?? [];
     @endphp
 
@@ -32,17 +32,17 @@
             <a
                 href="{{ $listingUrl }}"
                 class="lml-hr-fp-nr__page-back lml-focus-ring"
-                aria-label="Back to Non-Residents Client listing"
+                aria-label="Back to Family Planning Non Residents listing"
             >
                 <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span>Family Planning</span>
             </a>
-            <p class="lml-hr-fp-nr__page-head-title" id="lml-hr-fp-nr-create-heading">Family Planning</p>
         </header>
 
         <section class="lml-hr-fp-nr__form-panel" aria-labelledby="lml-hr-fp-nr-add-client-title">
             <div class="lml-hr-fp-nr__form-banner">
                 <i class="bi bi-person-plus-fill lml-hr-fp-nr__form-banner-icon" aria-hidden="true"></i>
-                <h3 id="lml-hr-fp-nr-add-client-title">Add New Client</h3>
+                <h3 id="lml-hr-fp-nr-add-client-title">Add New Non Resident</h3>
             </div>
 
             <form
@@ -70,6 +70,7 @@
                                 name="first_name"
                                 type="text"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
+                                placeholder="First Name"
                                 autocomplete="given-name"
                             >
                         </div>
@@ -80,6 +81,7 @@
                                 name="middle_name"
                                 type="text"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
+                                placeholder="Middle Name"
                                 autocomplete="additional-name"
                             >
                         </div>
@@ -90,6 +92,7 @@
                                 name="last_name"
                                 type="text"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
+                                placeholder="Last Name"
                                 autocomplete="family-name"
                             >
                         </div>
@@ -106,6 +109,7 @@
                                     type="date"
                                     class="lml-hr-fp-nr__input lml-focus-ring"
                                     autocomplete="bday"
+                                    data-hr-fp-nr-birthday
                                 >
                             </div>
                         </div>
@@ -116,7 +120,7 @@
                                 name="sex"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
                             >
-                                <option value="">Select sex</option>
+                                <option value="">Select</option>
                                 @foreach ($sexOptions as $option)
                                     <option value="{{ $option }}">{{ $option }}</option>
                                 @endforeach
@@ -129,7 +133,7 @@
                                 name="civil_status"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
                             >
-                                <option value="">Select civil status</option>
+                                <option value="">Select</option>
                                 @foreach ($civilStatusOptions as $option)
                                     <option value="{{ $option }}">{{ $option }}</option>
                                 @endforeach
@@ -137,38 +141,16 @@
                         </div>
                     </div>
 
-                    <div class="lml-hr-fp-nr__field-grid lml-hr-fp-nr__field-grid--3">
+                    <div class="lml-hr-fp-nr__field-grid lml-hr-fp-nr__field-grid--address">
                         <div class="lml-hr-fp-nr__field">
-                            <label for="lml-hr-fp-nr-address">Address / Zone</label>
+                            <label for="lml-hr-fp-nr-address">Address</label>
                             <input
                                 id="lml-hr-fp-nr-address"
                                 name="address_zone"
                                 type="text"
                                 class="lml-hr-fp-nr__input lml-focus-ring"
-                                autocomplete="address-line2"
-                            >
-                        </div>
-                        <div class="lml-hr-fp-nr__field">
-                            <label for="lml-hr-fp-nr-barangay">Barangay</label>
-                            <select
-                                id="lml-hr-fp-nr-barangay"
-                                name="barangay"
-                                class="lml-hr-fp-nr__input lml-focus-ring"
-                            >
-                                <option value="">Select barangay</option>
-                                @foreach ($barangays as $barangay)
-                                    <option value="{{ $barangay }}">{{ $barangay }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="lml-hr-fp-nr__field">
-                            <label for="lml-hr-fp-nr-municipality">Municipality</label>
-                            <input
-                                id="lml-hr-fp-nr-municipality"
-                                name="municipality"
-                                type="text"
-                                class="lml-hr-fp-nr__input lml-focus-ring"
-                                autocomplete="address-level2"
+                                placeholder="Complete Address"
+                                autocomplete="street-address"
                             >
                         </div>
                     </div>
@@ -198,12 +180,26 @@
                                 </div>
                             </div>
                             <div class="lml-hr-fp-nr__field">
+                                <label for="lml-hr-fp-nr-method">Method</label>
+                                <select
+                                    id="lml-hr-fp-nr-method"
+                                    name="method"
+                                    class="lml-hr-fp-nr__input lml-focus-ring"
+                                >
+                                    <option value="">Select method</option>
+                                    @foreach ($methodOptions as $option)
+                                        <option value="{{ $option }}">{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="lml-hr-fp-nr__field">
                                 <label for="lml-hr-fp-nr-remarks">Remarks</label>
                                 <textarea
                                     id="lml-hr-fp-nr-remarks"
                                     name="remarks"
                                     class="lml-hr-fp-nr__textarea lml-focus-ring"
-                                    rows="3"
+                                    rows="2"
+                                    placeholder="Enter remarks"
                                 ></textarea>
                             </div>
                         </div>
@@ -220,7 +216,7 @@
                 </fieldset>
                 </div>
 
-                <div class="lml-hr-fp-nr__form-actions">
+                <div class="lml-hr-fp-nr__form-actions lml-hr-fp-nr__form-actions--centered">
                     <a
                         href="{{ $listingUrl }}"
                         class="lml-hr-fp-nr__btn lml-hr-fp-nr__btn--cancel lml-focus-ring"

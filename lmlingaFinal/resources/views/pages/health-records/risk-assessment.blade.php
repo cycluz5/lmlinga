@@ -1,9 +1,10 @@
 {{--
     Health Records — Risk Assessment barangay-wide summary (Figma-aligned).
 
-    Data: App\Support\HealthRecordsRiskAssessment — UI-phase fixture only.
-    Not mapped from Household Profiling DemoRiskAssessment (frozen).
-    Filters are client-side. Add / Export use UI-phase toasts.
+    Data: App\Support\HealthRecordsRiskAssessment — Household Profiling
+    residents aged 19+ only. UI-phase display statuses. Not mapped from
+    frozen Household Profiling DemoRiskAssessment.
+    Filters are client-side. Export uses a UI-phase toast.
 --}}
 @extends('layouts.dashboard')
 
@@ -36,15 +37,6 @@
                 </div>
 
                 <div class="lml-hr-risk__actions" role="group" aria-label="Risk Assessment actions">
-                    <button
-                        type="button"
-                        class="lml-hr-risk__add-btn lml-focus-ring"
-                        data-hr-ra-add
-                        aria-label="Add risk assessment record"
-                    >
-                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        <span>Add</span>
-                    </button>
                     <button
                         type="button"
                         class="lml-hr-risk__export-btn lml-focus-ring"
@@ -216,6 +208,8 @@
                                     data-zone="{{ $row['zone'] }}"
                                     data-year="{{ $row['year'] }}"
                                     data-row-key="{{ $row['key'] }}"
+                                    data-member-id="{{ $row['member_id'] }}"
+                                    data-birthday="{{ $row['birthday'] }}"
                                 >
                                     <th scope="row" class="lml-hr-risk__cell lml-hr-risk__cell--name">
                                         {{ $row['full_name'] }}

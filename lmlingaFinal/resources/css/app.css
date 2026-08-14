@@ -54,6 +54,8 @@
 @import './pages/health-records-risk-assessment.css';
 @import './pages/health-records-family-planning.css';
 @import './pages/health-records-non-resident-family-planning.css';
+@import './pages/health-records-maternal.css';
+@import './pages/health-records-death.css';
 
 /*
  * Tailwind theme colors reference tokens.css (:root variables).

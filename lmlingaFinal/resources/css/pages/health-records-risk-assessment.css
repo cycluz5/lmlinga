@@ -67,39 +67,6 @@
     padding-top: 0.05rem;
 }
 
-.lml-hr-risk__add-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    flex: 0 0 auto;
-    min-height: 2.5rem; /* ~40px — Figma primary action */
-    padding: 0.4rem 1.05rem;
-    border: 1.5px solid #22c55e;
-    border-radius: 0.4rem;
-    background-color: #fff;
-    color: #15803d;
-    font-family: inherit;
-    font-size: 0.8125rem; /* 13px */
-    font-weight: 600;
-    line-height: 1.2;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.lml-hr-risk__add-btn i {
-    font-size: 0.95rem;
-    line-height: 1;
-    color: #16a34a;
-}
-
-.lml-hr-risk__add-btn:hover {
-    background-color: #f0fdf4;
-    border-color: #16a34a;
-    color: #166534;
-}
-
 .lml-hr-risk__export-btn {
     display: inline-flex;
     align-items: center;
@@ -273,10 +240,10 @@
 }
 
 .lml-hr-risk__filters {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    /* Desktop Figma target: Search ~40% / Zone ~30% / Year ~30% (gaps excluded). */
+    grid-template-columns: minmax(11rem, 4fr) minmax(9.5rem, 3fr) minmax(9.5rem, 3fr);
     align-items: center;
-    justify-content: center;
     gap: 0.75rem;
     width: 100%;
     min-width: 0;
@@ -286,10 +253,7 @@
 
 .lml-hr-risk__search {
     position: relative;
-    flex: 0 1 34%;
-    width: 34%;
-    max-width: 22rem;
-    min-width: 11rem;
+    min-width: 0;
 }
 
 .lml-hr-risk__search-icon {
@@ -329,10 +293,7 @@
 
 .lml-hr-risk__select-wrap {
     position: relative;
-    flex: 0 1 28%;
-    width: 28%;
-    max-width: 16rem;
-    min-width: 9rem;
+    min-width: 0;
 }
 
 .lml-hr-risk__select {
@@ -398,39 +359,37 @@
 
 .lml-hr-risk__table {
     width: 100%;
-    min-width: 58rem;
+    min-width: 54rem;
     table-layout: fixed;
     border-collapse: collapse;
     font-size: 0.8125rem;
 }
 
+/* Figma: Full Name readable; status columns compact (not stretched). */
 .lml-hr-risk__col--name {
-    width: 15%;
+    width: 20%;
 }
 
 .lml-hr-risk__col--bmi,
 .lml-hr-risk__col--bp,
 .lml-hr-risk__col--smoking,
-.lml-hr-risk__col--alcohol {
-    width: 12.5%;
-}
-
+.lml-hr-risk__col--alcohol,
 .lml-hr-risk__col--activity,
 .lml-hr-risk__col--family,
 .lml-hr-risk__col--chronic {
-    width: 11.67%;
+    width: 11.428%;
 }
 
 .lml-hr-risk__table thead th {
-    padding: 0.55rem 0.6rem 0.55rem;
+    padding: 0.4rem 0.45rem 0.42rem;
     background-color: #bfe8cd;
     color: #188649;
-    font-size: 0.875rem; /* 14px */
+    font-size: 0.8125rem; /* 13px — compact Figma header, still readable */
     font-weight: 700;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid #a5d9b8;
-    border-right: 1px solid rgba(20, 83, 45, 0.14);
+    border-right: 1px solid #6fbe8a;
     white-space: normal;
 }
 
@@ -441,28 +400,36 @@
 .lml-hr-risk__th-main {
     display: block;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.2;
 }
 
 .lml-hr-risk__th-sub {
     display: block;
-    margin-top: 0.18rem;
+    margin-top: 0.22rem;
+    padding-top: 0.22rem;
+    border-top: 1px solid #6fbe8a;
     color: #2f7a48;
     font-size: 0.6875rem; /* 11px */
     font-weight: 500;
-    line-height: 1.35;
+    line-height: 1.3;
     white-space: normal;
 }
 
 .lml-hr-risk__table tbody th,
 .lml-hr-risk__table tbody td {
-    padding: 0.58rem 0.6rem;
+    padding: 0.5rem 0.45rem;
     border-bottom: 1px solid #eef1f4;
+    border-right: 1px solid #d0d7de;
     color: #1f2937;
     font-size: 0.8125rem; /* 13px */
     font-weight: 600;
     vertical-align: middle;
     text-align: left;
+}
+
+.lml-hr-risk__table tbody th:last-child,
+.lml-hr-risk__table tbody td:last-child {
+    border-right: none;
 }
 
 .lml-hr-risk__table tbody tr:last-child th,
@@ -554,20 +521,11 @@
     }
 
     .lml-hr-risk__filters {
-        flex-wrap: wrap;
-        justify-content: stretch;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .lml-hr-risk__search {
-        flex: 1 1 100%;
-        width: 100%;
-        max-width: none;
-    }
-
-    .lml-hr-risk__select-wrap {
-        flex: 1 1 calc(50% - 0.4rem);
-        width: auto;
-        max-width: none;
+        grid-column: 1 / -1;
     }
 }
 
@@ -588,21 +546,11 @@
     }
 
     .lml-hr-risk__filters {
-        flex-wrap: wrap;
-        justify-content: stretch;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 
     .lml-hr-risk__search {
-        flex: 1 1 100%;
-        width: 100%;
-        max-width: none;
-    }
-
-    .lml-hr-risk__select-wrap {
-        flex: 1 1 calc(50% - 0.4rem);
-        width: auto;
-        min-width: 0;
-        max-width: none;
+        grid-column: 1 / -1;
     }
 }
 
@@ -615,7 +563,7 @@
     /*
      | RA-F1: On column layout, flex-basis: 16rem (from desktop wrap width)
      | becomes a vertical basis (~256px), creating a large blank gap under
-     | the description before Add/Export. Reset to content-sized height.
+     | the description before Export. Reset to content-sized height.
      */
     .lml-hr-risk__title-block {
         flex: 0 1 auto;
@@ -624,14 +572,13 @@
     }
 
     .lml-hr-risk__actions {
-        justify-content: stretch;
+        justify-content: flex-end;
         width: 100%;
         flex: 0 0 auto;
     }
 
-    .lml-hr-risk__add-btn,
     .lml-hr-risk__export-btn {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         min-height: 2.5rem;
     }
 
@@ -654,18 +601,11 @@
     }
 
     .lml-hr-risk__filters {
-        flex-direction: column;
-        align-items: stretch;
-        flex-wrap: nowrap;
-        justify-content: stretch;
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .lml-hr-risk__search,
-    .lml-hr-risk__select-wrap {
-        flex: 1 1 auto;
-        width: 100%;
-        min-width: 0;
-        max-width: none;
+    .lml-hr-risk__search {
+        grid-column: auto;
     }
 
     .lml-hr-risk__search-input,
@@ -690,6 +630,6 @@
     }
 
     .lml-hr-risk__table {
-        min-width: 52rem;
+        min-width: 50rem;
     }
 }

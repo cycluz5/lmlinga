@@ -9,7 +9,7 @@ import fs from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(
   __dirname,
-  '../docs/qa/screenshots/health-records-non-resident-family-planning-phase1.2-scale'
+  '../docs/qa/screenshots/health-records-non-resident-family-planning-figma-ui'
 );
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -18,33 +18,25 @@ const role = '?role=bns';
 
 const viewports = [
   { name: '1440x900', width: 1440, height: 900 },
-  { name: '1366x768', width: 1366, height: 768 },
   { name: '820x1180', width: 820, height: 1180 },
-  { name: '768x1024', width: 768, height: 1024 },
   { name: '390x844', width: 390, height: 844 },
-  { name: '360x800', width: 360, height: 800 },
 ];
 
-const pages = [
+const listingPages = [
   {
     slug: 'listing',
     path: `/health-records/family-planning/non-residents${role}`,
   },
+];
+
+const desktopPages = [
   {
-    slug: 'create-client',
+    slug: 'add-new-non-resident',
     path: `/health-records/family-planning/non-residents/create${role}`,
-  },
-  {
-    slug: 'client-show',
-    path: `/health-records/family-planning/non-residents/roselyn-a-mendoza${role}`,
   },
   {
     slug: 'add-visit',
     path: `/health-records/family-planning/non-residents/roselyn-a-mendoza/visits/create${role}`,
-  },
-  {
-    slug: 'edit-visit',
-    path: `/health-records/family-planning/non-residents/roselyn-a-mendoza/visits/NR-FP-001/edit${role}`,
   },
 ];
 
@@ -58,21 +50,28 @@ async function checkOverflow(page) {
   });
 }
 
-for (const pageDef of pages) {
+async function capture(pageDef, vp) {
+  const page = await browser.newPage();
+  await page.setViewportSize({ width: vp.width, height: vp.height });
+  const target = `${base}${pageDef.path}`;
+  const response = await page.goto(target, { waitUntil: 'networkidle', timeout: 60000 });
+  const ok = response?.ok() ?? false;
+  const overflow = await checkOverflow(page);
+  const file = path.join(outDir, `${pageDef.slug}-${vp.name}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  console.log(`saved ${file} ok=${ok} pageOverflow=${overflow}`);
+  await page.close();
+}
+
+for (const pageDef of listingPages) {
   for (const vp of viewports) {
-    const page = await browser.newPage();
-    await page.setViewportSize({ width: vp.width, height: vp.height });
-    const target = `${base}${pageDef.path}`;
-    const response = await page.goto(target, { waitUntil: 'networkidle', timeout: 60000 });
-    const ok = response?.ok() ?? false;
-    const overflow = await checkOverflow(page);
-    const file = path.join(outDir, `${pageDef.slug}-${vp.name}.png`);
-    await page.screenshot({ path: file, fullPage: true });
-    console.log(
-      `saved ${file} ok=${ok} pageOverflow=${overflow}`
-    );
-    await page.close();
+    await capture(pageDef, vp);
   }
+}
+
+const desktop = { name: '1440x900', width: 1440, height: 900 };
+for (const pageDef of desktopPages) {
+  await capture(pageDef, desktop);
 }
 
 await browser.close();

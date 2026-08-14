@@ -223,12 +223,12 @@ class HealthRecordsSidebarNavigationTest extends TestCase
             $panelHtml
         );
         $this->assertSame(
-            2,
+            0,
             substr_count($panelHtml, 'lml-sidebar__sublink--unavailable'),
-            'Until Maternal / Death destinations exist, two children must render as non-navigating items.'
+            'All Health Records children must have named destinations.'
         );
         $this->assertSame(
-            2,
+            0,
             substr_count($panelHtml, 'aria-disabled="true"')
         );
         $this->assertStringContainsString(
@@ -241,6 +241,14 @@ class HealthRecordsSidebarNavigationTest extends TestCase
         );
         $this->assertStringContainsString(
             'href="'.e(route('health-records.family-planning.index')).'"',
+            $panelHtml
+        );
+        $this->assertStringContainsString(
+            'href="'.e(route('health-records.maternal.index')).'"',
+            $panelHtml
+        );
+        $this->assertStringContainsString(
+            'href="'.e(route('health-records.death.index')).'"',
             $panelHtml
         );
         $this->assertDoesNotMatchRegularExpression(
@@ -475,22 +483,16 @@ class HealthRecordsSidebarNavigationTest extends TestCase
         $this->assertHealthRecordsCollapsed($html);
     }
 
-    public function test_canonical_health_records_child_routes_partial_availability(): void
+    public function test_canonical_health_records_child_routes_are_named_index_destinations(): void
     {
-        $this->assertTrue(RouteFacade::has('health-records.child-care.index'));
-        $this->assertTrue(RouteFacade::has('health-records.risk-assessment.index'));
-        $this->assertTrue(RouteFacade::has('health-records.family-planning.index'));
-        $this->assertFalse(RouteFacade::has('health-records.risk-assessment'));
-        $this->assertFalse(RouteFacade::has('health-records.family-planning'));
-
-        foreach (['maternal', 'death'] as $childKey) {
-            $this->assertFalse(
-                RouteFacade::has('health-records.'.$childKey),
-                "Unexpected early destination: health-records.{$childKey}"
+        foreach ($this->expectedChildKeys() as $childKey) {
+            $this->assertTrue(
+                RouteFacade::has('health-records.'.$childKey.'.index'),
+                "Missing Health Records destination: health-records.{$childKey}.index"
             );
             $this->assertFalse(
-                RouteFacade::has('health-records.'.$childKey.'.index'),
-                "Unexpected early destination: health-records.{$childKey}.index"
+                RouteFacade::has('health-records.'.$childKey),
+                "Unexpected alias: health-records.{$childKey}"
             );
         }
     }

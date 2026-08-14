@@ -32,5 +32,8 @@ import './pages/health-records-operation-timbang';
 import './pages/health-records-risk-assessment';
 import './pages/health-records-family-planning';
 import './pages/health-records-non-resident-family-planning';
+import './pages/health-records-maternal';
+import './pages/health-records-maternal-add';
+import './pages/health-records-death';
 
 window.bootstrap = bootstrap;

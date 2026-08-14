@@ -287,4 +287,32 @@ class HealthRecordsOperationTimbangTest extends TestCase
         $summary->assertOk();
         $this->assertStringContainsString('data-lml-hr-child-care', $summary->getContent());
     }
+
+    public function test_non_residents_scope_pill_links_to_listing(): void
+    {
+        $nrUrl = route('health-records.child-care.non-residents.index');
+        $this->assertSame('health-records/child-care/non-residents', Route::getRoutes()->getByName('health-records.child-care.non-residents.index')?->uri());
+
+        $html = $this->withSession([UiRole::SESSION_KEY => 'bhw'])
+            ->get(route('health-records.child-care.operation-timbang'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertSame(1, preg_match_all('/>\s*Non-Residents\s*<\/span>/u', $html));
+        $this->assertSame(1, substr_count($html, 'data-hr-cc-non-residents'));
+        $this->assertMatchesRegularExpression(
+            '/<a[^>]*href="'.preg_quote(e($nrUrl), '/').'"[^>]*data-hr-cc-non-residents/u',
+            $html
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/lml-hr-child-care__scope-pill[^>]*(?:aria-current|pill--active)/u',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/lml-hr-child-care__pill--active[^>]*aria-current="page"[^>]*>\s*Operation Timbang\s*</u',
+            $html
+        );
+        $this->assertSame('child-care', UiRole::sidebarActiveKey());
+        $this->assertStringContainsString('data-lml-hr-operation-timbang', $html);
+    }
 }

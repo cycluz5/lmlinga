@@ -40,6 +40,18 @@ final class HealthRecordsNonResidentFamilyPlanning
     }
 
     /**
+     * Latest visit for a client (most recent by visited_at).
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function latestVisit(array $client): ?array
+    {
+        $visits = is_array($client['visits'] ?? null) ? $client['visits'] : [];
+
+        return $visits === [] ? null : $visits[0];
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public static function findVisit(string $clientKey, string $visitId): ?array
@@ -115,6 +127,21 @@ final class HealthRecordsNonResidentFamilyPlanning
     public static function sexOptions(): array
     {
         return ['Female', 'Male'];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function methodOptions(): array
+    {
+        return [
+            'Pills',
+            'Condom',
+            'Injectable',
+            'IUD',
+            'Implant',
+            'BTL',
+        ];
     }
 
     /**

@@ -842,6 +842,11 @@ Route::middleware('ui.role')->group(function () {
         'show',
     ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.show');
 
+    Route::get('/health-records/child-care/non-residents/{childKey}/edit', [
+        \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
+        'edit',
+    ])->where('childKey', '[A-Za-z0-9\-]+')->name('health-records.child-care.non-residents.edit');
+
     Route::get('/health-records/child-care/non-residents/{childKey}/nutrition', [
         \App\Http\Controllers\HealthRecords\NonResidentChildCareController::class,
         'nutrition',
@@ -939,4 +944,44 @@ Route::middleware('ui.role')->group(function () {
         ])->where(['clientKey' => '[a-z0-9\-]+', 'visitId' => '[A-Za-z0-9\-]+'])
             ->name('health-records.family-planning.non-residents.visits.edit');
     });
+
+    /*
+     | Health Records — Maternal Care barangay-wide listing (UI-phase).
+     | Independent of Household Profiling → member Maternal Care.
+     | Female-only eligibility is enforced in HealthRecordsMaternal.
+     */
+    Route::get('/health-records/maternal', [
+        \App\Http\Controllers\HealthRecords\MaternalSummaryController::class,
+        'index',
+    ])->name('health-records.maternal.index');
+
+    Route::get('/health-records/maternal/non-residents', [
+        \App\Http\Controllers\HealthRecords\NonResidentMaternalController::class,
+        'index',
+    ])->name('health-records.maternal.non-residents.index');
+
+    Route::get('/health-records/maternal/non-residents/create', [
+        \App\Http\Controllers\HealthRecords\NonResidentMaternalController::class,
+        'create',
+    ])->name('health-records.maternal.non-residents.create');
+
+    Route::post('/health-records/maternal/non-residents', [
+        \App\Http\Controllers\HealthRecords\NonResidentMaternalController::class,
+        'store',
+    ])->name('health-records.maternal.non-residents.store');
+
+    Route::get('/health-records/maternal/non-residents/{clientKey}', [
+        \App\Http\Controllers\HealthRecords\NonResidentMaternalController::class,
+        'show',
+    ])->where('clientKey', '[A-Za-z0-9\-]+')->name('health-records.maternal.non-residents.show');
+
+    /*
+     | Health Records — Death barangay-wide listing (UI-phase).
+     | Rows come from DemoDeath session records joined to DemoCatalog identity.
+     | Independent of Household Profiling → member Death Information routes.
+     */
+    Route::get('/health-records/death', [
+        \App\Http\Controllers\HealthRecords\DeathSummaryController::class,
+        'index',
+    ])->name('health-records.death.index');
 });
