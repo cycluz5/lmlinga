@@ -1,11 +1,12 @@
 /**
- * Health Records → Child Care → Deworming monitoring summary.
+ * Health Records → Child Care → Deworming monitoring summary + record workflow.
  * Filters operate on displayed UI-phase preview rows only.
- * Export matches Vitamin A / Child Care UI-phase toast (no downloadable file).
+ * Export / summary Add use UI-phase toasts.
+ * Add Record Save uses preview toast (no persistence route yet).
  */
 
 function showDewormingToast(root, message) {
-    const toast = root.querySelector('[data-hr-dw-toast]');
+    const toast = root.querySelector('[data-hr-dw-toast], [data-hr-dw-record-toast]');
     if (!toast) {
         return;
     }
@@ -95,8 +96,35 @@ function initHealthRecordsDeworming(root) {
     refresh();
 }
 
+function initDewormingRecordForm(root) {
+    const form = root.querySelector('[data-hr-dw-deworming-form]');
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const message =
+            form.getAttribute('data-hr-dw-preview-save') ||
+            'Deworming record preview saved for this UI phase.';
+        showDewormingToast(root, message);
+
+        const returnUrl = form.getAttribute('data-hr-dw-return') || '';
+        window.clearTimeout(initDewormingRecordForm._returnTimer);
+        initDewormingRecordForm._returnTimer = window.setTimeout(() => {
+            if (returnUrl) {
+                window.location.assign(returnUrl);
+            }
+        }, 900);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-lml-hr-deworming]').forEach((root) => {
         initHealthRecordsDeworming(root);
+    });
+
+    document.querySelectorAll('[data-lml-hr-dw-record]').forEach((root) => {
+        initDewormingRecordForm(root);
     });
 });

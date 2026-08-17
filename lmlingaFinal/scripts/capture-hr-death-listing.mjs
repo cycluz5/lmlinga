@@ -15,6 +15,7 @@ const target = `${base}/health-records/death?role=bhw`;
 
 const viewports = [
   { name: '1440x900', width: 1440, height: 900 },
+  { name: '1366x768', width: 1366, height: 768 },
   { name: '820x1180', width: 820, height: 1180 },
   { name: '390x844', width: 390, height: 844 },
 ];

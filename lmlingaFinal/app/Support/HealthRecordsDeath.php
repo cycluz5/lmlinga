@@ -2,15 +2,20 @@
 
 namespace App\Support;
 
+use App\Models\DeathRequest;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+
 /**
- * Barangay-wide Death listing (Health Records → Death).
- *
- * UI-PHASE ONLY: fixture rows and derived summary counts for Figma-aligned
- * preview. Not persisted. Not mapped from Household Profiling DemoDeath.
+ * Health Records → Death listing helpers.
+ * Listing rows come from persisted death_requests. Resident candidates come from DemoCatalog.
  */
 final class HealthRecordsDeath
 {
     public const EMPTY = '—';
+
+    public const LISTING_PER_PAGE = 7;
 
     /**
      * @return list<string>
@@ -27,20 +32,261 @@ final class HealthRecordsDeath
     }
 
     /**
-     * UI-phase monitoring rows. Summary cards and filter options derive from these.
+     * @return Builder<DeathRequest>
+     */
+    public static function listingQuery(): Builder
+    {
+        return DeathRequest::query()->orderByDesc('submitted_at');
+    }
+
+    /**
+     * @return array{search: string, zone: string, cause: string, sex: string, year: string}
+     */
+    public static function listingFiltersFromRequest(Request $request): array
+    {
+        return [
+            'search' => trim((string) $request->query('search', '')),
+            'zone' => (string) $request->query('zone', 'all'),
+            'cause' => (string) $request->query('cause', 'all'),
+            'sex' => (string) $request->query('sex', 'all'),
+            'year' => (string) $request->query('year', 'all'),
+        ];
+    }
+
+    /**
+     * @param  Builder<DeathRequest>  $query
+     * @param  array{search?: string, zone?: string, cause?: string, sex?: string, year?: string}  $filters
+     * @return Builder<DeathRequest>
+     */
+    public static function applyListingFilters(Builder $query, array $filters): Builder
+    {
+        $search = strtolower(trim((string) ($filters['search'] ?? '')));
+        $zone = (string) ($filters['zone'] ?? 'all');
+        $cause = (string) ($filters['cause'] ?? 'all');
+        $sex = (string) ($filters['sex'] ?? 'all');
+        $year = (string) ($filters['year'] ?? 'all');
+
+        if ($search !== '') {
+            $query->where(function (Builder $builder) use ($search): void {
+                $builder
+                    ->whereRaw('LOWER(resident_name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(member_id) LIKE ?', ['%'.$search.'%']);
+            });
+        }
+
+        if ($zone !== 'all' && $zone !== '') {
+            $query->where('zone', $zone);
+        }
+
+        if ($cause !== 'all' && $cause !== '') {
+            $query->where('cause_of_death', $cause);
+        }
+
+        if ($sex === 'female') {
+            $query->whereIn('resident_sex', ['Female', 'female', 'F', 'f', 'Woman', 'woman', 'Girl', 'girl', 'Female/Girl', 'female/girl']);
+        } elseif ($sex === 'male') {
+            $query->whereIn('resident_sex', ['Male', 'male', 'M', 'm', 'Man', 'man', 'Boy', 'boy', 'Male/Boy', 'male/boy']);
+        }
+
+        if ($year !== 'all' && $year !== '') {
+            $query->whereYear('date_of_death', $year);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public static function paginatedListing(Request $request, ?int $perPage = null): LengthAwarePaginator
+    {
+        $perPage = $perPage ?? self::LISTING_PER_PAGE;
+        $filters = self::listingFiltersFromRequest($request);
+        $query = self::applyListingFilters(self::listingQuery(), $filters);
+        $total = (clone $query)->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = max(1, (int) $request->query('page', 1));
+        if ($page > $lastPage) {
+            $page = $lastPage;
+        }
+
+        /** @var LengthAwarePaginator<int, array<string, mixed>> $paginator */
+        $paginator = $query
+            ->paginate($perPage, ['*'], 'page', $page)
+            ->withQueryString()
+            ->through(fn (DeathRequest $row): array => self::fromRequest($row));
+
+        return $paginator;
+    }
+
+    /**
+     * Filtered Death Records for export (not limited to the current pagination page).
      *
      * @return list<array<string, mixed>>
      */
-    public static function rows(): array
+    public static function filteredListingRows(Request $request): array
     {
-        return [
-            self::row('kristine-b-reyes', 'Kristine B. Reyes', 32, 'Female', 'Zone 1', 'Kidney Failure', '2026-03-12'),
-            self::row('jacob-a-magistrado', 'Jacob A. Magistrado', 40, 'Male', 'Zone 2', 'Accident', '2026-01-30'),
-            self::row('haziel-h-santos', 'Haziel H. Santos', 60, 'Female', 'Zone 3', 'Stroke', '2025-01-04'),
-            self::row('andrei-b-malaya', 'Andrei B. Malaya', 50, 'Male', 'Zone 4', 'Kidney Failure', '2025-02-07'),
-            self::row('crisley-f-fernando', 'Crisley F. Fernando', 44, 'Female', 'Zone 5', 'Heart Attack', '2025-05-14'),
-            self::row('gabriel-allan-s-chua', 'Gabriel Allan S. Chua', 60, 'Male', 'Zone 1', 'Stroke', '2025-04-29'),
-        ];
+        $filters = self::listingFiltersFromRequest($request);
+
+        return self::applyListingFilters(self::listingQuery(), $filters)
+            ->get()
+            ->map(fn (DeathRequest $row): array => self::fromRequest($row))
+            ->all();
+    }
+
+    /**
+     * @param  array{search?: string, zone?: string, cause?: string, sex?: string, year?: string}  $filters
+     * @return list<string>
+     */
+    public static function filterLabels(array $filters): array
+    {
+        $labels = [];
+        $search = trim((string) ($filters['search'] ?? ''));
+        $zone = (string) ($filters['zone'] ?? 'all');
+        $cause = (string) ($filters['cause'] ?? 'all');
+        $sex = (string) ($filters['sex'] ?? 'all');
+        $year = (string) ($filters['year'] ?? 'all');
+
+        if ($search !== '') {
+            $labels[] = 'Search: '.$search;
+        }
+        if ($zone !== 'all' && $zone !== '') {
+            $labels[] = 'Zone: '.$zone;
+        }
+        if ($cause !== 'all' && $cause !== '') {
+            $labels[] = 'Cause of Death: '.$cause;
+        }
+        if ($sex === 'female') {
+            $labels[] = 'Sex: Female';
+        } elseif ($sex === 'male') {
+            $labels[] = 'Sex: Male';
+        }
+        if ($year !== 'all' && $year !== '') {
+            $labels[] = 'Year: '.$year;
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param  array{search?: string, zone?: string, cause?: string, sex?: string, year?: string}  $filters
+     * @return array<string, string>
+     */
+    public static function exportQuery(array $filters): array
+    {
+        return array_filter(
+            $filters,
+            static fn (string $value): bool => $value !== '' && $value !== 'all'
+        );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function listingRows(): array
+    {
+        return self::listingQuery()
+            ->get()
+            ->map(fn (DeathRequest $row): array => self::fromRequest($row))
+            ->all();
+    }
+
+    /**
+     * Living and in-progress catalog members a health worker may open a Death form for.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function residentCandidates(): array
+    {
+        $latestByMember = DeathRequest::query()
+            ->orderByDesc('id')
+            ->get()
+            ->unique(static fn (DeathRequest $row): string => $row->household_no.'|'.$row->member_id)
+            ->keyBy(static fn (DeathRequest $row): string => $row->household_no.'|'.$row->member_id);
+
+        $approved = array_fill_keys(ResidentVitalStatus::deceasedKeys(), true);
+        $rows = [];
+
+        foreach (DemoCatalog::households() as $householdNo => $household) {
+            if (! is_array($household)) {
+                continue;
+            }
+
+            foreach ($household['memberList'] ?? [] as $member) {
+                if (! is_array($member)) {
+                    continue;
+                }
+
+                $memberId = DemoCatalog::normalizeMemberId((string) ($member['id'] ?? ''));
+                if ($memberId === '') {
+                    continue;
+                }
+
+                $hh = DemoCatalog::normalizeHouseholdNo((string) $householdNo);
+                $key = $hh.'|'.$memberId;
+                $latest = $latestByMember->get($key);
+                $isDeceased = isset($approved[$key]);
+                $fullName = (string) ($member['name'] ?? 'Resident');
+                $sex = (string) ($member['sex'] ?? '');
+                $age = (string) ($member['age'] ?? self::EMPTY);
+                $relationship = (string) ($member['relationship'] ?? '');
+                $birthday = function_exists('lml_demo_member_display')
+                    ? lml_demo_member_display($member, 'birthday')
+                    : (string) ($member['birthday'] ?? '');
+
+                $rows[] = [
+                    'household_no' => $hh,
+                    'member_id' => $memberId,
+                    'full_name' => $fullName,
+                    'sex' => $sex,
+                    'age' => $age,
+                    'relationship' => $relationship,
+                    'birthday_display' => $birthday,
+                    'identity_search' => strtolower(trim(implode(' ', array_filter([
+                        $fullName,
+                        $memberId,
+                        $relationship,
+                        $sex,
+                        $birthday,
+                    ])))),
+                    'zone' => (string) ($household['zone'] ?? $household['purok'] ?? ''),
+                    'household_display' => (string) ($household['displayNo'] ?? $hh),
+                    'vital_label' => $isDeceased
+                        ? ResidentVitalStatus::DECEASED
+                        : ($latest?->statusLabel() ?? 'Active'),
+                    'status' => $latest?->status ?? 'none',
+                    'open_url' => route('health-records.death.show', [
+                        'householdNo' => $hh,
+                        'memberId' => $memberId,
+                    ]),
+                    'can_submit' => ! $isDeceased && ($latest === null || $latest->isRejected()),
+                ];
+            }
+        }
+
+        usort(
+            $rows,
+            static function (array $a, array $b): int {
+                $byName = strnatcasecmp((string) $a['full_name'], (string) $b['full_name']);
+
+                return $byName !== 0
+                    ? $byName
+                    : strnatcasecmp((string) $a['member_id'], (string) $b['member_id']);
+            }
+        );
+
+        return $rows;
+    }
+
+    public static function initials(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name)) ?: [];
+        $letters = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            $letters .= mb_strtoupper(mb_substr($part, 0, 1));
+        }
+
+        return $letters !== '' ? $letters : '?';
     }
 
     /**
@@ -49,7 +295,10 @@ final class HealthRecordsDeath
      */
     public static function summaryCounts(?array $rows = null): array
     {
-        $rows ??= self::rows();
+        $rows ??= array_values(array_filter(
+            self::listingRows(),
+            static fn (array $row): bool => ($row['status'] ?? '') === DeathRequest::STATUS_APPROVED
+        ));
         $female = 0;
         $male = 0;
 
@@ -75,7 +324,7 @@ final class HealthRecordsDeath
      */
     public static function years(?array $rows = null): array
     {
-        $rows ??= self::rows();
+        $rows ??= self::listingRows();
         $years = [];
 
         foreach ($rows as $row) {
@@ -97,7 +346,7 @@ final class HealthRecordsDeath
      */
     public static function causes(?array $rows = null): array
     {
-        $rows ??= self::rows();
+        $rows ??= self::listingRows();
         $causes = [];
 
         foreach ($rows as $row) {
@@ -131,7 +380,9 @@ final class HealthRecordsDeath
         $matched = [];
 
         foreach ($rows as $row) {
-            $name = strtolower((string) ($row['full_name'] ?? ''));
+            $name = strtolower(trim(
+                (string) ($row['full_name'] ?? '').' '.(string) ($row['member_id'] ?? '')
+            ));
             $rowZone = (string) ($row['zone'] ?? '');
             $rowCause = (string) ($row['cause_of_death'] ?? '');
             $rowSex = (string) ($row['sex_filter'] ?? '');
@@ -154,30 +405,35 @@ final class HealthRecordsDeath
     /**
      * @return array<string, mixed>
      */
-    private static function row(
-        string $key,
-        string $fullName,
-        int $age,
-        string $sex,
-        string $zone,
-        string $cause,
-        string $dateIso
-    ): array {
-        $year = preg_match('/^(\d{4})-/', $dateIso, $match) ? $match[1] : '';
+    public static function fromRequest(DeathRequest $request): array
+    {
+        $iso = $request->date_of_death?->format('Y-m-d') ?? '';
+        $year = preg_match('/^(\d{4})-/', $iso, $match) ? $match[1] : '';
+        $sex = (string) $request->resident_sex;
 
         return [
-            'key' => $key,
-            'full_name' => $fullName,
-            'age' => (string) $age,
+            'key' => (string) $request->id,
+            'request_id' => $request->id,
+            'household_no' => $request->household_no,
+            'member_id' => $request->member_id,
+            'full_name' => $request->resident_name,
+            'age' => $request->resident_age !== null ? (string) $request->resident_age : self::EMPTY,
             'sex' => $sex,
             'sex_filter' => HealthRecordsMaternal::isFemaleSex($sex)
                 ? 'female'
                 : (HealthRecordsMaternal::isMaleSex($sex) ? 'male' : ''),
-            'zone' => $zone,
-            'cause_of_death' => $cause,
-            'date_of_death' => DemoDeath::formatDateForDisplay($dateIso),
-            'date_of_death_iso' => $dateIso,
+            'zone' => (string) ($request->zone ?: self::EMPTY),
+            'cause_of_death' => $request->cause_of_death,
+            'date_of_death' => $request->formattedDateOfDeath(),
+            'date_of_death_iso' => $iso,
             'year' => $year,
+            'certificate_no' => $request->certificate_no,
+            'status' => $request->status,
+            'status_label' => $request->statusLabel(),
+            'open_url' => route('health-records.death.show', [
+                'householdNo' => $request->household_no,
+                'memberId' => $request->member_id,
+            ]),
         ];
     }
 }

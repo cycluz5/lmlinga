@@ -4,6 +4,7 @@
  */
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createLaMedallaBaseMap, LA_MEDALLA_CENTER, LA_MEDALLA_ZOOM } from '../maps/la-medalla-base';
 
 /**
  * Spot Mapping scope: Barangay La Medalla, Iriga City, Camarines Sur only.
@@ -13,8 +14,8 @@ import 'leaflet/dist/leaflet.css';
  * Future phases should replace isWithinDemoScope() with official barangay
  * polygon / GIS validation — do not treat this radius as legal boundaries.
  */
-const DEMO_CENTER = [13.3806, 123.4312];
-const DEMO_ZOOM = 16;
+const DEMO_CENTER = LA_MEDALLA_CENTER;
+const DEMO_ZOOM = LA_MEDALLA_ZOOM;
 const GPS_ZOOM = 17;
 const DEMO_SCOPE_RADIUS_METERS = 2000;
 
@@ -338,20 +339,7 @@ function initSpotMapping() {
         );
     }
 
-    const map = L.map(mapEl, {
-        zoomControl: true,
-        attributionControl: true,
-    }).setView(DEMO_CENTER, DEMO_ZOOM);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-
-    requestAnimationFrame(() => {
-        map.invalidateSize();
-    });
-    window.addEventListener('resize', () => map.invalidateSize());
+    const map = createLaMedallaBaseMap(mapEl, { zoom: DEMO_ZOOM });
 
     function showOverlay(message, { mode = 'info', icon = 'bi-geo-alt-fill' } = {}) {
         overlay.hidden = false;
